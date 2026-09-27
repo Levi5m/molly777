@@ -128,8 +128,9 @@
     #menu-footer.hiding { opacity: 0; transform: translateY(1vh); }
     #footer-left { font-weight: 500; display: flex; align-items: center; line-height: 1.2; }
     #footer-left img { height: 2.2vh; min-height: 18px; width: auto; margin-right: 0.5vh; display: block; }
+    #footer-right-group { display: flex; align-items: center; gap: 0.8vh; }
+    #footer-ac { font-weight: 500; color: #ffffff; }
     #footer-right { font-weight: 500; line-height: 1.2; }
-    #footer-ac { font-weight: 400; color: rgba(180, 120, 255, 0.9); margin-left: 0.8vh; }
     #menu-scrollbar { position: absolute; left: -1.2vh; top: 13.25vh; width: 0.6vh; height: 39vh; opacity: 0; transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     #menu-scrollbar.visible { opacity: 1; }
     #menu-scrollbar.hiding { opacity: 0; }
@@ -230,8 +231,11 @@
         </div>
     </div>
     <div id="menu-footer">
-        <span id="footer-left"><img src=""> Molly<span id="footer-ac"></span></span>
-        <span id="footer-right">0/0</span>
+        <span id="footer-left"><img src=""> Molly</span>
+        <span id="footer-right-group">
+            <span id="footer-ac">AC - None</span>
+            <span id="footer-right">0/0</span>
+        </span>
     </div>
 </div>
 
@@ -659,24 +663,29 @@ window.updateFooterInfo = function() {
 
 /* ═══════════════════════════════════════════════════════════════
    FOOTER AC TEXT — called from Lua via
-   MachoExecuteDuiScript(menuDui, 'window.setFooter("Molly  •  AC: None")')
-   Writes only into the #footer-ac span so the "Molly" image and
-   the right-side "1/5" page counter are never touched.
+   MachoExecuteDuiScript(menuDui, 'window.setFooter("AC - None")')
+   Writes into #footer-ac (bottom-right, next to page counter).
+   The Lua side sends the format "AC - <name>" already, so this
+   function just takes the last token to be safe:
+     "AC - None"       -> "AC - None"
+     "AC - WaveShield" -> "AC - WaveShield"
+     "Molly  •  AC - None" -> "AC - None"  (strips a Molly prefix)
    ═══════════════════════════════════════════════════════════════ */
 window.setFooter = function(text) {
     var acSpan = document.getElementById('footer-ac');
     if (!acSpan) return;
     if (text === undefined || text === null || text === '') {
-        acSpan.textContent = '';
+        acSpan.textContent = 'AC - None';
         return;
     }
     var s = String(text);
-    // If the incoming text starts with "Molly" strip it — the HTML
-    // already renders "Molly" next to the image, so we only want the
-    // AC portion that follows the separator.
-    s = s.replace(/^\s*Molly\s*[•·\-–—]*\s*/i, '');
-    if (s === '') { acSpan.textContent = ''; return; }
-    acSpan.textContent = '  •  ' + s;
+    // If a Molly prefix leaked in, strip everything before the last "AC".
+    var idx = s.lastIndexOf('AC');
+    if (idx > 0) s = s.substring(idx);
+    // Normalize the separator to " - ".
+    s = s.replace(/^AC\s*[•·\-–—:]*\s*/i, 'AC - ');
+    if (!/^AC\s*-\s*/i.test(s)) s = 'AC - ' + s;
+    acSpan.textContent = s;
 };
 
 window.findFirstValidItem = function(options) {
